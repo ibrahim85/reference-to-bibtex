@@ -14,83 +14,7 @@ A comprehensive web application that converts academic references from Word, Exc
 - **Real-time Validation**: Verify references before conversion
 - **Edit & Refine**: Manual editing capability for each entry
 
-## 🏗️ Tech Stack
 
-### Frontend
-- React 18+ with TypeScript
-- Tailwind CSS for styling
-- Vite for bundling
-- Axios for API calls
-
-### Backend
-- Node.js with Express.js
-- TypeScript for type safety
-- CORS enabled for frontend communication
-
-### APIs & Libraries
-- CrossRef.org REST API (free, no authentication)
-- XLSX for Excel file parsing
-- Mammoth for Word document parsing
-
-## 📁 Project Structure
-
-```
-reference-to-bibtex/
-├── backend/                     # Node.js Express API
-│   ├── src/
-│   │   ├── routes/             # API endpoints
-│   │   ├── controllers/        # Request handlers
-│   │   ├── services/           # Business logic
-│   │   ├── middleware/         # Express middleware
-│   │   └── app.ts              # Express app setup
-│   ├── package.json
-│   └── tsconfig.json
-├── frontend/                    # React web interface
-│   ├── src/
-│   │   ├── components/         # React components
-│   │   ├── styles/             # CSS files
-│   │   ├── App.tsx             # Main app component
-│   │   └── index.tsx           # React entry point
-│   ├── public/
-│   ├── package.json
-│   └── tsconfig.json
-├── docker-compose.yml
-└── README.md
-```
-
-## 🚀 Quick Start
-
-### Prerequisites
-- Node.js 16+
-- npm or yarn
-
-### Local Development
-
-```bash
-# Clone the repository
-git clone https://github.com/ibrahim85/reference-to-bibtex.git
-cd reference-to-bibtex
-
-# Setup Backend
-cd backend
-npm install
-npm run dev
-# Backend runs on http://localhost:5000
-
-# In another terminal, setup Frontend
-cd frontend
-npm install
-npm start
-# Frontend runs on http://localhost:3000
-```
-
-### Using Docker
-
-```bash
-docker-compose up --build
-# Frontend: http://localhost:3000
-# Backend: http://localhost:5000
-```
 
 ## 📖 API Documentation
 
@@ -178,25 +102,6 @@ The application generates properly formatted BibTeX entries:
 }
 ```
 
-## ⚙️ Configuration
-
-### Environment Variables
-
-**Backend (.env)**
-```
-PORT=5000
-NODE_ENV=development
-CORS_FRONTEND_URL=http://localhost:3000
-CROSSREF_API_URL=https://api.crossref.org/v1
-RATE_LIMIT=50
-```
-
-**Frontend (.env)**
-```
-REACT_APP_API_URL=http://localhost:5000
-REACT_APP_MAX_FILE_SIZE=10485760
-```
-
 ## 🔮 Future Enhancements
 
 - 📅 Semantic Scholar API integration
@@ -208,15 +113,6 @@ REACT_APP_MAX_FILE_SIZE=10485760
 - 📅 Machine learning for improved parsing accuracy
 - 📅 Support for additional file formats (PDF, TXT)
 
-## 🤝 Contributing
-
-Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
 
 ## 📝 License
 
@@ -225,15 +121,7 @@ MIT License - see [LICENSE](LICENSE) file for details
 ## 🙏 Acknowledgments
 
 - CrossRef.org for their excellent API
-- React and Node.js communities
 - All contributors and users
-
-## 📞 Support
-
-For issues, questions, or suggestions:
-- Open an issue on GitHub
-- Email: support@example.com
-- Check existing documentation
 
 ---
 
