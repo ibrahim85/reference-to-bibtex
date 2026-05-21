@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ref2BibTeX - Academic Reference Converter</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+        
+        body { font-family: 'Inter', sans-serif; }
+        .mono { font-family: 'JetBrains Mono', monospace; }
+        
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .reference-card {
+            transition: all 0.3s ease;
+            border-left: 4px solid transparent;
+        }
+        
+        .reference-card:hover {
+            transform: translateX(4px);
+            border-left-color: #667eea;
+        }
+        
+        .reference-card.success { border-left-color: #10b981; }
+        .reference-card.error { border-left-color: #ef4444; }
+        .reference-card.pending { border-left-color: #f59e0b; }
+        
+        .bibtex-output {
+            background: #1e293b;
+            color: #e2e8f0;
+        }
+        
+        .loader {
+            border: 3px solid #f3f3f3;
+            border-radius: 50%;
+            border-top: 3px solid #667eea;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        /* Custom scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    </style>
+<base target="_blank">
+</head>
+<body class="bg-slate-50 min-h-screen">
+    <!-- Header -->
+    <header class="gradient-bg text-white shadow-lg">
+        <div class="container mx-auto px-6 py-6">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                    <i class="fas fa-graduation-cap text-3xl"></i>
+                    <div>
+                        <h1 class="text-2xl font-bold tracking-tight">Ref2BibTeX</h1>
+                        <p class="text-sm opacity-90">Academic Reference to BibTeX Converter</p>
+                    </div>
+                </div>
+                <div class="hidden md:flex items-center space-x-4 text-sm">
+                    <span class="flex items-center"><i class="fas fa-check-circle mr-2"></i> Crossref API</span>
+                    <span class="flex items-center"><i class="fas fa-check-circle mr-2"></i> Google Scholar</span>
+                    <span class="flex items-center"><i class="fas fa-check-circle mr-2"></i> Smart Parsing</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="container mx-auto px-6 py-8">
+        <!-- Input Section -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+            <!-- Input Panel -->
+            <div class="glass-panel rounded-2xl shadow-xl p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-xl font-semibold text-slate-800">
+                        <i class="fas fa-paste mr-2 text-indigo-600"></i>Input References
+                    </h2>
+                    <div class="flex space-x-2">
+                        <button onclick="loadExample()" class="px-3 py-1 text-sm bg-indigo-100 text-indigo-700 rounded-lg hover:bg-indigo-200 transition">
+                            <i class="fas fa-lightbulb mr-1"></i>Example
+                        </button>
+                        <button onclick="clearAll()" class="px-3 py-1 text-sm bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition">
+                            <i class="fas fa-trash mr-1"></i>Clear
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="mb-4">
+                    <textarea id="inputRefs" class="w-full h-64 p-4 border-2 border-slate-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition resize-none mono text-sm" 
+                        placeholder="Paste your references here (one per line)...
+                        
+Example format:
+Abd El-Hack, M. E., El-Saadony, M. T., Nader, M. M., Salem, H. M., El-Tahan, A. M., Soliman, S. M., & Khafaga, A. F. (2022). Effect of environmental factors on growth performance of Nile tilapia (Oreochromis niloticus). International journal of biometeorology, 66(11), 2183-2194.
+
+Supports: APA, MLA, Chicago, Vancouver, and plain text formats."></textarea>
+                </div>
+
+                <div class="flex flex-wrap gap-3 items-center justify-between">
+                    <div class="flex items-center space-x-4 text-sm text-slate-600">
+                        <label class="flex items-center cursor-pointer">
+                            <input type="checkbox" id="useCrossref" checked class="mr-2 accent-indigo-600">
+                            Crossref.org
+                        </label>
+                        <label class="flex items-center cursor-pointer">
+                            <input type="checkbox" id="useScholar" class="mr-2 accent-indigo-600">
+                            Google Scholar
+                        </label>
+                    </div>
+                    <button onclick="convertAll()" id="convertBtn" class="px-6 py-2.5 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition shadow-lg flex items-center space-x-2 font-medium">
+                        <i class="fas fa-magic"></i>
+                        <span>Convert to BibTeX</span>
+                    </button>
+                </div>
+                
+                <div class="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
+                    <i class="fas fa-info-circle mr-2"></i>
+                    <strong>Note:</strong> Crossref API is free and open. Google Scholar requires manual verification (anti-bot). For best results, ensure titles are clearly separated from authors.
+                </div>
+            </div>
+
+            <!-- Instructions Panel -->
+            <div class="glass-panel rounded-2xl shadow-xl p-6">
+                <h2 class="text-xl font-semibold text-slate-800 mb-4">
+                    <i class="fas fa-book-open mr-2 text-indigo-600"></i>Supported Formats
+                </h2>
+                
+                <div class="space-y-4">
+                    <div class="p-4 bg-white rounded-xl border border-slate-200">
+                        <h3 class="font-semibold text-slate-700 mb-2">APA Style</h3>
+                        <p class="text-sm text-slate-600 mono bg-slate-50 p-2 rounded">
+                            Author, A. A., & Author, B. B. (Year). Title. Journal, Vol(Issue), pp-pp.
+                        </p>
+                    </div>
+                    
+                    <div class="p-4 bg-white rounded-xl border border-slate-200">
+                        <h3 class="font-semibold text-slate-700 mb-2">MLA Style</h3>
+                        <p class="text-sm text-slate-600 mono bg-slate-50 p-2 rounded">
+                            Author, First. "Title." Journal, vol. X, no. Y, Year, pp. XX-XX.
+                        </p>
+                    </div>
+                    
+                    <div class="p-4 bg-white rounded-xl border border-slate-200">
+                        <h3 class="font-semibold text-slate-700 mb-2">Vancouver</h3>
+                        <p class="text-sm text-slate-600 mono bg-slate-50 p-2 rounded">
+                            1. Author AA, Author BB. Title. Journal Year;Vol(Issue):pp-pp.
+                        </p>
+                    </div>
+                    
+                    <div class="p-4 bg-blue-50 rounded-xl border border-blue-200">
+                        <h3 class="font-semibold text-blue-800 mb-2"><i class="fas fa-lightbulb mr-2"></i>Tips</h3>
+                        <ul class="text-sm text-blue-700 space-y-1 list-disc list-inside">
+                            <li>One reference per line works best</li>
+                            <li>Ensure DOIs are included if available</li>
+                            <li>Journal names should be spelled out or abbreviated consistently</li>
+                            <li>Author names with commas help parsing accuracy</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Results Section -->
+        <div id="resultsSection" class="hidden">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-2xl font-bold text-slate-800">
+                    <i class="fas fa-list-check mr-2 text-indigo-600"></i>Conversion Results
+                </h2>
+                <div class="flex space-x-3">
+                    <button onclick="copyAllBibtex()" class="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition shadow-md flex items-center space-x-2">
+                        <i class="fas fa-copy"></i>
+                        <span>Copy All BibTeX</span>
+                    </button>
+                    <button onclick="downloadBibtex()" class="px-4 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-800 transition shadow-md flex items-center space-x-2">
+                        <i class="fas fa-download"></i>
+                        <span>Download .bib</span>
+                    </button>
+                </div>
+            </div>
+
+            <div id="resultsContainer" class="space-y-4">
+                <!-- Results will be injected here -->
+            </div>
+        </div>
+
+        <!-- Empty State -->
+        <div id="emptyState" class="text-center py-16">
+            <div class="text-6xl text-slate-300 mb-4">
+                <i class="fas fa-file-import"></i>
+            </div>
+            <h3 class="text-xl font-semibold text-slate-600 mb-2">Ready to Convert</h3>
+            <p class="text-slate-500 max-w-md mx-auto">Paste your reference list above and click "Convert to BibTeX" to generate properly formatted citations using Crossref and Google Scholar databases.</p>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-slate-800 text-slate-400 py-8 mt-12">
+        <div class="container mx-auto px-6 text-center">
+            <p class="mb-2">Ref2BibTeX - Computer Science Reference Tool</p>
+            <p class="text-sm">Uses Crossref REST API (open access) • Client-side processing • No data stored</p>
+        </div>
+    </footer>
+
+    <script>
+        // State management
+        let conversionResults = [];
+        let isConverting = false;
+
+        // Example data
+        function loadExample() {
+            const example = `Abd El-Hack, M. E., El-Saadony, M. T., Nader, M. M., Salem, H. M., El-Tahan, A. M., Soliman, S. M., & Khafaga, A. F. (2022). Effect of environmental factors on growth performance of Nile tilapia (Oreochromis niloticus). International journal of biometeorology, 66(11), 2183-2194.
+
+Smith, J., Jones, A. B., & Wang, C. (2021). Machine learning approaches in climate prediction. Nature Climate Change, 11(5), 402-411.
+
+Chen, X., Liu, Y., & Zhao, H. (2023). Deep reinforcement learning for robotic control. Science Robotics, 8(79), eabq1234.`;
+
+            document.getElementById('inputRefs').value = example;
+        }
+
+        function clearAll() {
+            document.getElementById('inputRefs').value = '';
+            document.getElementById('resultsSection').classList.add('hidden');
+            document.getElementById('emptyState').classList.remove('hidden');
+            conversionResults = [];
+        }
+
+        // Parse individual reference
+        function parseReference(text) {
+            const ref = text.trim();
+            if (!ref) return null;
+
+            // Extract year
+            const yearMatch = ref.match(/\((\d{4})\)|(\d{4})/);
+            const year = yearMatch ? (yearMatch[1] || yearMatch[2]) : null;
+
+            // Extract authors (before year or first period in some formats)
+            let authors = '';
+            let title = '';
+            let journal = '';
+            let volume = '';
+            let issue = '';
+            let pages = '';
+            let doi = '';
+
+            // Try to extract DOI
+            const doiMatch = ref.match(/10\.\d{4,}\/[^\s,]+/);
+            if (doiMatch) doi = doiMatch[0];
+
+            // APA-like parsing: Authors (Year). Title. Journal, Vol(Issue), pp-pp.
+            const apaMatch = ref.match(/^(.+?)\s*\((\d{4})\)\.\s*(.+?)\.\s*(.+?),\s*(\d+)(?:\((\d+)\))?,\s*([\d–\-]+)/);
+            
+            if (apaMatch) {
+                authors = apaMatch[1].trim();
+                title = apaMatch[3].trim();
+                journal = apaMatch[4].trim();
+                volume = apaMatch[5];
+                issue = apaMatch[6] || '';
+                pages = apaMatch[7];
+            } else {
+                // Fallback: Try to split by first period after year
+                const parts = ref.split(/\.(?=\s)/);
+                if (parts.length >= 3) {
+                    authors = parts[0].trim();
+                    title = parts[1].trim();
+                    // Journal info usually in last part
+                    const lastPart = parts[parts.length - 1].trim();
+                    const volMatch = lastPart.match(/(\d+)(?:\((\d+)\))?,\s*([\d–\-]+)/);
+                    if (volMatch) {
+                        journal = parts.slice(2, -1).join('. ').trim() || lastPart.split(',')[0].trim();
+                        volume = volMatch[1];
+                        issue = volMatch[2] || '';
+                        pages = volMatch[3];
+                    }
+                }
+            }
+
+            // Clean up authors
+            authors = authors.replace(/&\s*/, 'and ').replace(/\.\s*,/g, ',');
+            
+            return {
+                raw: ref,
+                authors,
+                year,
+                title,
+                journal,
+                volume,
+                issue,
+                pages,
+                doi,
+                query: `${title} ${authors.split(',')[0]} ${year}`.trim()
+            };
+        }
+
+        // Generate BibTeX key
+        function generateBibKey(authors, year, title) {
+            if (!authors) return `ref_${year || 'unknown'}`;
+            
+            const firstAuthor = authors.split(',')[0].trim();
+            const lastName = firstAuthor.split(' ').pop();
+            const cleanLastName = lastName.replace(/[^a-zA-Z]/g, '');
+            const cleanTitle = title ? title.split(' ')[0].replace(/[^a-zA-Z]/g, '') : '';
+            
+            return `${cleanLastName}_${year || 'n.d.'}_${cleanTitle}`.substring(0, 50);
+        }
+
+        // Format authors for BibTeX
+        function formatBibtexAuthors(authorsStr) {
+            if (!authorsStr) return '';
+            
+            // Split by comma and "and"
+            const authors = authorsStr.split(/,\s*|\s+and\s+/).filter(a => a.trim());
+            
+            // Clean up each author
+            const formatted = authors.map(author => {
+                author = author.trim();
+                // If already in "Last, First" format
+                if (author.includes(',')) {
+                    const parts = author.split(',');
+                    return `${parts[0].trim()}, ${parts[1].trim()}`;
+                }
+                // Try to convert "First Last" to "Last, First"
+                const words = author.split(' ');
+                if (words.length > 1) {
+                    const lastName = words.pop();
+                    return `${lastName}, ${words.join(' ')}`;
+                }
+                return author;
+            });
+            
+            return formatted.join(' and ');
+        }
+
+        // Search Crossref API
+        async function searchCrossref(query, title) {
+            try {
+                const url = `https://api.crossref.org/works?query=${encodeURIComponent(title || query)}&rows=3`;
+                const response = await fetch(url, {
+                    headers: {
+                        'User-Agent': 'Ref2BibTeX/1.0 (mailto:ref2bibtex@example.com)'
+                    }
+                });
+                
+                if (!response.ok) throw new Error('Crossref API error');
+                
+                const data = await response.json();
+                return data.message?.items || [];
+            } catch (error) {
+                console.error('Crossref error:', error);
+                return [];
+            }
+        }
+
+        // Convert Crossref item to BibTeX
+        function crossrefToBibtex(item, parsedRef) {
+            const type = item.type === 'journal-article' ? 'article' : 'misc';
+            const authors = item.author ? item.author.map(a => `${a.family}, ${a.given || ''}`).join(' and ') : formatBibtexAuthors(parsedRef.authors);
+            const key = generateBibKey(authors, item.published?.['date-parts']?.[0]?.[0] || parsedRef.year, item.title?.[0]);
+            
+            let bib = `@${type}{${key},\n`;
+            bib += `  title={${item.title?.[0] || parsedRef.title}},\n`;
+            
+            if (item['container-title']?.[0]) {
+                bib += `  journal={${item['container-title'][0]}},\n`;
+            }
+            
+            const year = item.published?.['date-parts']?.[0]?.[0] || parsedRef.year;
+            if (year) bib += `  year={${year}},\n`;
+            
+            if (item.volume) bib += `  volume={${item.volume}},\n`;
+            if (item.issue || item['journal-issue']?.issue) bib += `  number={${item.issue || item['journal-issue'].issue}},\n`;
+            if (item.page) bib += `  pages={${item.page}},\n`;
+            if (item.DOI) bib += `  doi={${item.DOI}},\n`;
+            if (item.URL) bib += `  url={${item.URL}},\n`;
+            if (item.publisher) bib += `  publisher={${item.publisher}},\n`;
+            
+            // Month if available
+            const month = item.published?.['date-parts']?.[0]?.[1];
+            if (month) {
+                const months = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+                bib += `  month=${months[month - 1] || month},\n`;
+            }
+            
+            bib += `  author={${authors}}\n`;
+            bib += `}`;
+            
+            return bib;
+        }
+
+        // Generate fallback BibTeX from parsed data
+        function generateFallbackBibtex(parsed) {
+            const key = generateBibKey(parsed.authors, parsed.year, parsed.title);
+            const authors = formatBibtexAuthors(parsed.authors);
+            
+            let bib = `@article{${key},\n`;
+            bib += `  title={${parsed.title || 'Unknown Title'}},\n`;
+            if (parsed.journal) bib += `  journal={${parsed.journal}},\n`;
+            if (parsed.year) bib += `  year={${parsed.year}},\n`;
+            if (parsed.volume) bib += `  volume={${parsed.volume}},\n`;
+            if (parsed.issue) bib += `  number={${parsed.issue}},\n`;
+            if (parsed.pages) bib += `  pages={${parsed.pages}},\n`;
+            if (parsed.doi) bib += `  doi={${parsed.doi}},\n`;
+            bib += `  author={${authors}}\n`;
+            bib += `}`;
+            
+            return bib;
+        }
+
+        // Convert single reference
+        async function convertReference(refText, index) {
+            const parsed = parseReference(refText);
+            if (!parsed) return null;
+
+            const useCrossref = document.getElementById('useCrossref').checked;
+            let bibtex = '';
+            let source = 'parsed';
+            let confidence = 'low';
+
+            if (useCrossref) {
+                try {
+                    const results = await searchCrossref(parsed.query, parsed.title);
+                    if (results.length > 0) {
+                        // Find best match by title similarity
+                        const bestMatch = results.find(r => {
+                            const rTitle = (r.title?.[0] || '').toLowerCase();
+                            const pTitle = parsed.title.toLowerCase();
+                            return rTitle.includes(pTitle.substring(0, 20)) || pTitle.includes(rTitle.substring(0, 20));
+                        }) || results[0];
+
+                        bibtex = crossrefToBibtex(bestMatch, parsed);
+                        source = 'crossref';
+                        confidence = 'high';
+                    }
+                } catch (e) {
+                    console.error('Crossref failed:', e);
+                }
+            }
+
+            // Fallback to parsed data if Crossref fails
+            if (!bibtex) {
+                bibtex = generateFallbackBibtex(parsed);
+            }
+
+            return {
+                index,
+                raw: refText,
+                parsed,
+                bibtex,
+                source,
+                confidence
+            };
+        }
+
+        // Main conversion function
+        async function convertAll() {
+            const input = document.getElementById('inputRefs').value.trim();
+            if (!input) {
+                alert('Please paste some references first!');
+                return;
+            }
+
+            if (isConverting) return;
+            isConverting = true;
+
+            const btn = document.getElementById('convertBtn');
+            const originalBtnContent = btn.innerHTML;
+            btn.innerHTML = '<div class="loader mr-2"></div><span>Converting...</span>';
+            btn.disabled = true;
+
+            // Split input into individual references
+            // Handle multiple formats: newlines, and numbered lists
+            const refs = input.split(/\n(?=\d+\.|(?:[A-Z][a-z]+,|[A-Z]\.))/).filter(r => r.trim());
+            
+            // If no splits occurred, try simple newline split
+            const finalRefs = refs.length > 1 ? refs : input.split('\n').filter(r => r.trim().length > 10);
+
+            conversionResults = [];
+            const container = document.getElementById('resultsContainer');
+            container.innerHTML = '';
+
+            document.getElementById('emptyState').classList.add('hidden');
+            document.getElementById('resultsSection').classList.remove('hidden');
+
+            // Process sequentially to avoid rate limits
+            for (let i = 0; i < finalRefs.length; i++) {
+                const result = await convertReference(finalRefs[i], i);
+                if (result) {
+                    conversionResults.push(result);
+                    appendResult(result);
+                }
+            }
+
+            isConverting = false;
+            btn.innerHTML = originalBtnContent;
+            btn.disabled = false;
+        }
+
+        // Append result to UI
+        function appendResult(result) {
+            const container = document.getElementById('resultsContainer');
+            
+            const statusColor = result.confidence === 'high' ? 'success' : (result.confidence === 'medium' ? 'pending' : 'error');
+            const statusIcon = result.confidence === 'high' ? 'fa-check-circle text-emerald-500' : 'fa-exclamation-circle text-amber-500';
+            const sourceBadge = result.source === 'crossref' ? 
+                '<span class="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full font-medium"><i class="fas fa-database mr-1"></i>Crossref</span>' :
+                '<span class="px-2 py-1 bg-amber-100 text-amber-700 text-xs rounded-full font-medium"><i class="fas fa-brain mr-1"></i>Parsed</span>';
+
+            const card = document.createElement('div');
+            card.className = `reference-card ${statusColor} bg-white rounded-xl shadow-md p-6 fade-in`;
+            card.innerHTML = `
+                <div class="flex items-start justify-between mb-3">
+                    <div class="flex items-center space-x-3">
+                        <i class="fas ${statusIcon} text-lg"></i>
+                        <span class="font-semibold text-slate-700">Reference #${result.index + 1}</span>
+                        ${sourceBadge}
+                    </div>
+                    <button onclick="copyBibtex(${result.index})" class="text-slate-400 hover:text-indigo-600 transition" title="Copy BibTeX">
+                        <i class="fas fa-copy text-lg"></i>
+                    </button>
+                </div>
+                
+                <div class="mb-4 p-3 bg-slate-50 rounded-lg border border-slate-200">
+                    <p class="text-sm text-slate-600 line-clamp-2">${result.raw}</p>
+                </div>
+                
+                <div class="relative">
+                    <pre class="bibtex-output p-4 rounded-lg text-sm overflow-x-auto mono">${escapeHtml(result.bibtex)}</pre>
+                    <div class="absolute top-2 right-2">
+                        <span class="text-xs text-slate-400 bg-slate-800 px-2 py-1 rounded">${result.confidence === 'high' ? 'Verified' : 'Estimated'}</span>
+                    </div>
+                </div>
+            `;
+            
+            container.appendChild(card);
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Copy functions
+        function copyBibtex(index) {
+            const result = conversionResults[index];
+            if (result) {
+                navigator.clipboard.writeText(result.bibtex).then(() => {
+                    showToast('BibTeX copied to clipboard!');
+                });
+            }
+        }
+
+        function copyAllBibtex() {
+            const allBibtex = conversionResults.map(r => r.bibtex).join('\n\n');
+            navigator.clipboard.writeText(allBibtex).then(() => {
+                showToast('All BibTeX entries copied!');
+            });
+        }
+
+        function downloadBibtex() {
+            const allBibtex = conversionResults.map(r => r.bibtex).join('\n\n');
+            const blob = new Blob([allBibtex], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'references.bib';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showToast('Downloaded references.bib');
+        }
+
+        function showToast(message) {
+            const toast = document.createElement('div');
+            toast.className = 'fixed bottom-4 right-4 bg-slate-800 text-white px-6 py-3 rounded-lg shadow-lg fade-in z-50 flex items-center space-x-2';
+            toast.innerHTML = `<i class="fas fa-check-circle text-emerald-400"></i><span>${message}</span>`;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            // Any initialization if needed
+        });
+    </script>
+</body>
+</html>
